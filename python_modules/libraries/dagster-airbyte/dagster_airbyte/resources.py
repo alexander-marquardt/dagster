@@ -53,6 +53,8 @@ class AirbyteResource:
         cancel_sync_on_run_termination: bool = True,
         username: Optional[str] = None,
         password: Optional[str] = None,
+        api_auth_token: Optional[str] = None,
+
     ):
         self._host = host
         self._port = port
@@ -71,6 +73,7 @@ class AirbyteResource:
 
         self._username = username
         self._password = password
+        self._api_auth_token = api_auth_token
 
         self._cancel_sync_on_run_termination = cancel_sync_on_run_termination
 
@@ -127,6 +130,11 @@ class AirbyteResource:
         """
         url = self.api_base_url + endpoint
         headers = {"accept": "application/json"}
+
+        # if connecting to Airbyte Cloud, the connection will fail without a user agent
+        if self._api_auth_token:
+            headers.update({"Authorization":  self._api_auth_token,
+                            "User-Agent": "fake-user-agent"})
 
         num_retries = 0
         while True:
@@ -364,6 +372,11 @@ class AirbyteResource:
             description="Username if using basic auth.",
             is_required=False,
         ),
+        "api_auth_token": Field(
+            StringSource,
+            description="Auth token if using Airbyte Cloud - https://portal.airbyte.com/.",
+            is_required=False,
+        ),
         "password": Field(
             StringSource,
             description="Password if using basic auth.",
@@ -469,4 +482,5 @@ def airbyte_resource(context) -> AirbyteResource:
         cancel_sync_on_run_termination=context.resource_config["cancel_sync_on_run_termination"],
         username=context.resource_config.get("username"),
         password=context.resource_config.get("password"),
+        api_auth_token=context.resource_config.get("api_auth_token"),
     )
